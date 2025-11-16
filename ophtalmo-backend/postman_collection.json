@@ -1,0 +1,547 @@
+{
+  "info": {
+    "name": "Ophthalmology EMR API",
+    "description": "Complete API collection for the enhanced EMR backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "    pm.environment.set('token', jsonData.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@ophtalmo.com\",\n  \"password\": \"your-password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Dr. Jean Dupont\",\n  \"specialite\": \"Ophtalmologie\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "item": [
+        {
+          "name": "List Patients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/Patient?page=1&limit=50&search=&sortBy=created_date&order=DESC",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Patient"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "sortBy",
+                  "value": "created_date"
+                },
+                {
+                  "key": "order",
+                  "value": "DESC"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Patient",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/Patient/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Patient", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "patient-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Dupont\",\n  \"prenom\": \"Jean\",\n  \"genre\": \"M\",\n  \"date_naissance\": \"1980-05-15\",\n  \"telephone\": \"0612345678\",\n  \"email\": \"jean.dupont@example.com\",\n  \"adresse\": \"123 Rue de la Paix, Paris\",\n  \"allergie\": \"Aucune\",\n  \"ald\": false,\n  \"cmu\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/Patient",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Patient"]
+            }
+          }
+        },
+        {
+          "name": "Update Patient",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telephone\": \"0623456789\",\n  \"email\": \"jean.dupont.updated@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/Patient/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Patient", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "patient-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Patient (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/Patient/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Patient", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "patient-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Examinations",
+      "item": [
+        {
+          "name": "Create Orthoptic Exam",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"patient-uuid-here\",\n  \"date_examen\": \"2025-01-15T10:30:00\",\n  \"motif_consultation\": \"Contrôle annuel\",\n  \"pio_od\": \"15\",\n  \"pio_og\": \"14\",\n  \"ref_subjective_od_sphere\": \"-1.00\",\n  \"ref_subjective_od_cylindre\": \"-0.50\",\n  \"ref_subjective_od_axe\": \"90\",\n  \"ref_subjective_od_avl\": \"10/10\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ExamenOrthoptiste",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ExamenOrthoptiste"]
+            }
+          }
+        },
+        {
+          "name": "Create Ophthalmology Exam",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"patient-uuid-here\",\n  \"date_examen\": \"2025-01-15T11:00:00\",\n  \"lampe_fente_od\": \"Cornée claire, chambre antérieure calme\",\n  \"lampe_fente_og\": \"Cornée claire, chambre antérieure calme\",\n  \"fond_oeil_od\": \"Papille normale, macula intacte\",\n  \"fond_oeil_og\": \"Papille normale, macula intacte\",\n  \"diagnostic\": \"Myopie simple\",\n  \"conduite_tenir\": \"Correction optique, contrôle dans 1 an\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ExamenOphtalmologie",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ExamenOphtalmologie"]
+            }
+          }
+        },
+        {
+          "name": "List Patient Exams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ExamenOphtalmologie?search=&sortBy=date_examen&order=DESC",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ExamenOphtalmologie"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "sortBy",
+                  "value": "date_examen"
+                },
+                {
+                  "key": "order",
+                  "value": "DESC"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prescriptions",
+      "item": [
+        {
+          "name": "Create Prescription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"patient-uuid-here\",\n  \"date_ordonnance\": \"2025-01-15T11:30:00\",\n  \"type_ordonnance\": \"Médicaments\",\n  \"contenu\": \"Larmes artificielles\\n3 fois par jour\\nDurée: 1 mois\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/Ordonnance",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Ordonnance"]
+            }
+          }
+        },
+        {
+          "name": "List Prescriptions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/Ordonnance?page=1&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Ordonnance"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Upload",
+      "item": [
+        {
+          "name": "Upload File",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/upload",
+              "host": ["{{base_url}}"],
+              "path": ["api", "upload"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Imaging",
+      "item": [
+        {
+          "name": "Create Imaging Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"patient-uuid-here\",\n  \"date_imagerie\": \"2025-01-15T11:00:00\",\n  \"type_examen\": \"OCT\",\n  \"oeil\": \"OD\",\n  \"image_url\": \"http://localhost:3001/uploads/image.jpg\",\n  \"interpretation\": \"Épaisseur maculaire normale\",\n  \"notes\": \"Suivi DMLA\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/Imagerie",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Imagerie"]
+            }
+          }
+        },
+        {
+          "name": "List Imaging Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/Imagerie?search=OCT",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Imagerie"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "OCT"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Statistics & Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "statistics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultations",
+      "item": [
+        {
+          "name": "Create Consultation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"patient-uuid-here\",\n  \"date_consultation\": \"2025-01-20T14:00:00\",\n  \"statut\": \"en_attente\",\n  \"motif\": \"Contrôle post-opératoire\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/Consultation",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Consultation"]
+            }
+          }
+        },
+        {
+          "name": "List Consultations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/Consultation?search=en_attente&sortBy=date_consultation",
+              "host": ["{{base_url}}"],
+              "path": ["api", "Consultation"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "en_attente"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "date_consultation"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "IVT Tracking",
+      "item": [
+        {
+          "name": "Create IVT Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"patient-uuid-here\",\n  \"date_injection\": \"2025-01-15\",\n  \"oeil\": \"OD\",\n  \"acuite_visuelle\": \"6/10\",\n  \"epaisseur_maculaire\": 320.5,\n  \"produit_injecte\": \"Avastin\",\n  \"notes\": \"Injection bien tolérée\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/IVT",
+              "host": ["{{base_url}}"],
+              "path": ["api", "IVT"]
+            }
+          }
+        },
+        {
+          "name": "List IVT Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/IVT?sortBy=date_injection&order=DESC",
+              "host": ["{{base_url}}"],
+              "path": ["api", "IVT"],
+              "query": [
+                {
+                  "key": "sortBy",
+                  "value": "date_injection"
+                },
+                {
+                  "key": "order",
+                  "value": "DESC"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
