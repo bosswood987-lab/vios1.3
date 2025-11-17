@@ -359,6 +359,7 @@ export default function Gestion() {
       queryClient.invalidateQueries({ queryKey: ['current-user'] });
       setShowSignatureDialog(false);
       base44.auth.me().then(setCurrentUser);
+      toast.success("Documents & signature mis à jour avec succès");
     },
   });
 
@@ -546,6 +547,10 @@ export default function Gestion() {
             <TabsTrigger value="lentilles" className="gap-2">
               <Contact className="w-4 h-4" />
               Lentilles
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <ImageIcon className="w-4 h-4" />
+              Documents & Signature
             </TabsTrigger>
           </TabsList>
 
@@ -1042,6 +1047,218 @@ export default function Gestion() {
                 </TableBody>
               </Table>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="documents" className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold">Personnalisation des documents médicaux</h2>
+              <p className="text-gray-600">
+                Configurez votre en-tête et signature pour tous vos documents : ordonnances, prescriptions de lunettes/lentilles, courriers médicaux...
+              </p>
+            </div>
+
+            <div className="grid gap-6">
+              {/* Section 1: En-tête */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileUp className="w-5 h-5 text-blue-600" />
+                    En-tête de document
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Cet en-tête apparaîtra en haut de tous vos documents médicaux (ordonnances, prescriptions, courriers)
+                  </p>
+
+                  {signatureData.entete_ordonnance ? (
+                    <Card className="p-4 bg-gray-50 border-2 border-blue-200">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          {signatureData.entete_ordonnance.toLowerCase().endsWith('.pdf') ? (
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-12 h-12 text-red-600" />
+                              <div>
+                                <p className="font-medium">PDF En-tête importé</p>
+                                <a 
+                                  href={signatureData.entete_ordonnance} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 hover:underline"
+                                >
+                                  Télécharger le PDF
+                                </a>
+                              </div>
+                            </div>
+                          ) : (
+                            <img 
+                              src={signatureData.entete_ordonnance} 
+                              alt="En-tête" 
+                              className="max-h-64 object-contain w-full rounded border"
+                            />
+                          )}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setSignatureData({ ...signatureData, entete_ordonnance: "" })}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Supprimer
+                        </Button>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="p-8 border-2 border-dashed border-gray-300 bg-gray-50">
+                      <div className="text-center">
+                        <FileUp className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                        <p className="font-medium text-gray-700 mb-1">Aucun en-tête configuré</p>
+                        <p className="text-sm text-gray-500">
+                          Uploadez une image (JPG, PNG) ou un PDF qui apparaîtra en haut de tous vos documents
+                        </p>
+                      </div>
+                    </Card>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleUploadEnteteImage}
+                      className="hidden"
+                      id="entete-upload-tab"
+                      disabled={uploadingTemplate}
+                    />
+                    <Label
+                      htmlFor="entete-upload-tab"
+                      className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {uploadingTemplate ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Téléchargement...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          {signatureData.entete_ordonnance ? 'Remplacer l\'en-tête' : 'Choisir une image ou PDF'}
+                        </>
+                      )}
+                    </Label>
+                    <p className="text-xs text-gray-500">
+                      Formats acceptés : JPG, PNG, PDF
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Section 2: Signature */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-green-600" />
+                    Signature manuscrite
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Ajoutez une image de votre signature qui apparaîtra en bas de vos documents
+                  </p>
+
+                  {signatureData.signature_image_url ? (
+                    <Card className="p-4 bg-gray-50 border-2 border-green-200">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          <img 
+                            src={signatureData.signature_image_url} 
+                            alt="Signature" 
+                            className="max-h-32 object-contain bg-white p-2 rounded border"
+                          />
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setSignatureData({ ...signatureData, signature_image_url: "" })}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Supprimer
+                        </Button>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="p-8 border-2 border-dashed border-gray-300 bg-gray-50">
+                      <div className="text-center">
+                        <ImageIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                        <p className="font-medium text-gray-700 mb-1">Aucune signature configurée</p>
+                        <p className="text-sm text-gray-500">
+                          Uploadez une image de votre signature manuscrite
+                        </p>
+                      </div>
+                    </Card>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleUploadSignatureImage}
+                      className="hidden"
+                      id="signature-upload-tab"
+                      disabled={uploadingSignature}
+                    />
+                    <Label
+                      htmlFor="signature-upload-tab"
+                      className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      {uploadingSignature ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Téléchargement...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          {signatureData.signature_image_url ? 'Remplacer la signature' : 'Choisir une image'}
+                        </>
+                      )}
+                    </Label>
+                    <p className="text-xs text-gray-500">
+                      Formats acceptés : JPG, PNG
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Section 3: Aperçu et sauvegarde */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-blue-100 rounded-full">
+                        <Save className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Enregistrer vos modifications</p>
+                        <p className="text-sm text-gray-600">
+                          Appliquez les changements à tous vos futurs documents
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={handleSaveSignature}
+                      size="lg"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                      disabled={uploadingSignature || uploadingTemplate}
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Enregistrer
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
 
