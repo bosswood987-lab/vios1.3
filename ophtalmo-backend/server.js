@@ -35,6 +35,15 @@ const logger = winston.createLogger({
   ]
 });
 
+// ==================== JWT SECRET VALIDATION ====================
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  logger.error('JWT_SECRET environment variable is required but not configured');
+  logger.error('Please set JWT_SECRET in your .env file');
+  logger.error('Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+
 // ==================== DATABASE ====================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -168,7 +177,7 @@ const authMiddleware = async (req, res, next) => {
       throw new AuthenticationError('No token provided');
     }
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this');
+    const decoded = jwt.verify(token, JWT_SECRET);
     
     // Get user from database
     const result = await pool.query(
@@ -703,13 +712,15 @@ app.post('/api/auth/login',
       
       const user = result.rows[0];
       
-      // For now, we'll skip password check if no password_hash exists
-      // In production, you should migrate to hashed passwords
-      if (user.password_hash) {
-        const validPassword = await bcrypt.compare(password, user.password_hash);
-        if (!validPassword) {
-          throw new AuthenticationError('Invalid credentials');
-        }
+      // Require password_hash to exist for security
+      if (!user.password_hash) {
+        logger.error(`Login attempt for user without password_hash: ${email}`);
+        throw new AuthenticationError('Account not properly configured');
+      }
+      
+      const validPassword = await bcrypt.compare(password, user.password_hash);
+      if (!validPassword) {
+        throw new AuthenticationError('Invalid credentials');
       }
       
       const token = jwt.sign(
@@ -718,7 +729,7 @@ app.post('/api/auth/login',
           email: user.email, 
           role: user.role 
         },
-        process.env.JWT_SECRET || 'your-secret-key-change-this',
+        JWT_SECRET,
         { expiresIn: '24h' }
       );
       
@@ -907,7 +918,7 @@ app.use((req, res) => {
 const server = app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`📊 Database: ${process.env.DATABASE_URL?.split('@')[1] || 'not configured'}`);
-  logger.info(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'configured' : 'using default (CHANGE IN PRODUCTION)'}`);
+  logger.info(`🔐 JWT Secret: configured`);
   logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
