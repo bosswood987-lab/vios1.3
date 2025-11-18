@@ -475,6 +475,7 @@ CREATE TABLE IF NOT EXISTS abbreviation (
   abbreviation VARCHAR(50) NOT NULL,
   full_text TEXT NOT NULL,
   description VARCHAR(255),
+  user_id UUID REFERENCES user_table(id) ON DELETE CASCADE,
   is_global BOOLEAN DEFAULT FALSE,
   created_date TIMESTAMP DEFAULT NOW(),
   updated_date TIMESTAMP DEFAULT NOW(),
@@ -484,6 +485,7 @@ CREATE TABLE IF NOT EXISTS abbreviation (
 
 CREATE INDEX idx_abbreviation_abbrev ON abbreviation(abbreviation);
 CREATE INDEX idx_abbreviation_global ON abbreviation(is_global);
+CREATE INDEX idx_abbreviation_user_id ON abbreviation(user_id);
 
 -- ==================== CONSULTATION ====================
 CREATE TABLE IF NOT EXISTS consultation (
