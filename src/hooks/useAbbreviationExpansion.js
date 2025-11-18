@@ -13,9 +13,9 @@ export function useAbbreviationExpansion(currentUserId) {
   const { data: abbreviations } = useQuery({
     queryKey: ['abbreviations'],
     queryFn: async () => {
-      const all = await base44.entities.Abbreviation.list();
-      // Return global abbreviations and user-specific abbreviations
-      return all.filter(a => a.is_global || a.created_by === currentUserId);
+      // Backend already filters by user_id and is_global
+      // Returns only abbreviations the user can access
+      return await base44.entities.Abbreviation.list();
     },
     initialData: [],
     enabled: !!currentUserId,

@@ -226,8 +226,8 @@ export default function Gestion() {
   const { data: abbreviations } = useQuery({
     queryKey: ['abbreviations'],
     queryFn: async () => {
-      const all = await base44.entities.Abbreviation.list();
-      return all.filter(a => a.is_global || a.created_by === currentUser?.email);
+      // Backend already filters by user_id and is_global
+      return await base44.entities.Abbreviation.list();
     },
     initialData: [],
     enabled: !!currentUser,
@@ -372,7 +372,7 @@ export default function Gestion() {
   });
 
   const createAbbreviationMutation = useMutation({
-    mutationFn: (data) => base44.entities.Abbreviation.create({ ...data, created_by: currentUser?.email }),
+    mutationFn: (data) => base44.entities.Abbreviation.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['abbreviations'] });
       setShowAbbreviationDialog(false);

@@ -237,8 +237,8 @@ const ENTITIES = {
   DossierATraiter: { table: 'dossieratraiter' },
   IVT: { table: 'ivt' },
   TypeVerres: { table: 'typeverres' },
-  Consultation: { table: 'consultation' },
-  Abbreviation: { table: 'abbreviation' }
+  Consultation: { table: 'consultation' }
+  // Note: Abbreviation has custom routes defined separately for user filtering
 };
 
 // ==================== AUTH ROUTES ====================
@@ -630,6 +630,207 @@ app.post('/api/auth/change-password',
       logger.info('Password changed', { userId: req.user.id });
       
       res.json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ==================== CUSTOM ABBREVIATION ROUTES ====================
+// Custom routes for Abbreviation to filter by user_id and global abbreviations
+// These routes are defined before generic CRUD to take precedence
+
+// GET all abbreviations (user-specific + global)
+app.get('/api/Abbreviation',
+  authMiddleware,
+  async (req, res, next) => {
+    try {
+      const { limit, offset, orderBy = 'created_date', order = 'DESC' } = req.query;
+      
+      // Return global abbreviations OR abbreviations created by the current user
+      let query = `
+        SELECT * FROM abbreviation 
+        WHERE deleted_at IS NULL 
+        AND (is_global = true OR user_id = $1)
+      `;
+      
+      // Add ordering
+      if (orderBy) {
+        query += ` ORDER BY ${orderBy} ${order}`;
+      }
+      
+      // Add pagination
+      if (limit) {
+        query += ` LIMIT ${parseInt(limit)}`;
+      }
+      if (offset) {
+        query += ` OFFSET ${parseInt(offset)}`;
+      }
+      
+      const result = await pool.query(query, [req.user.id]);
+      res.json(result.rows);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// GET one abbreviation
+app.get('/api/Abbreviation/:id',
+  authMiddleware,
+  [param('id').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM abbreviation WHERE id = $1 AND (is_global = true OR user_id = $2)',
+        [req.params.id, req.user.id]
+      );
+      
+      if (result.rows.length === 0) {
+        throw new NotFoundError('Abbreviation not found');
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// CREATE abbreviation
+app.post('/api/Abbreviation',
+  authMiddleware,
+  [
+    body('abbreviation').notEmpty().trim(),
+    body('full_text').notEmpty().trim(),
+    body('description').optional().trim(),
+    body('is_global').optional().isBoolean()
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { abbreviation, full_text, description, is_global } = req.body;
+      
+      const query = `
+        INSERT INTO abbreviation (abbreviation, full_text, description, is_global, user_id, created_by, created_date, updated_date)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, [
+        abbreviation,
+        full_text,
+        description || null,
+        is_global || false,
+        req.user.id,
+        req.user.email
+      ]);
+      
+      await logAudit(req.user.id, 'create', 'abbreviation', null);
+      
+      logger.info('Abbreviation created', { id: result.rows[0].id, user: req.user.email });
+      
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// UPDATE abbreviation
+app.put('/api/Abbreviation/:id',
+  authMiddleware,
+  [
+    param('id').isUUID(),
+    body('abbreviation').optional().notEmpty().trim(),
+    body('full_text').optional().notEmpty().trim(),
+    body('description').optional().trim(),
+    body('is_global').optional().isBoolean()
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { abbreviation, full_text, description, is_global } = req.body;
+      
+      // Build dynamic update query
+      const updates = [];
+      const values = [];
+      let paramCount = 1;
+      
+      if (abbreviation !== undefined) {
+        updates.push(`abbreviation = $${paramCount++}`);
+        values.push(abbreviation);
+      }
+      
+      if (full_text !== undefined) {
+        updates.push(`full_text = $${paramCount++}`);
+        values.push(full_text);
+      }
+      
+      if (description !== undefined) {
+        updates.push(`description = $${paramCount++}`);
+        values.push(description);
+      }
+      
+      if (is_global !== undefined) {
+        updates.push(`is_global = $${paramCount++}`);
+        values.push(is_global);
+      }
+      
+      if (updates.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+      
+      updates.push(`updated_date = NOW()`);
+      values.push(req.params.id);
+      values.push(req.user.id);
+      
+      const query = `
+        UPDATE abbreviation
+        SET ${updates.join(', ')}
+        WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, values);
+      
+      if (result.rows.length === 0) {
+        throw new NotFoundError('Abbreviation not found or you do not have permission to update it');
+      }
+      
+      await logAudit(req.user.id, 'update', 'abbreviation', null);
+      
+      logger.info('Abbreviation updated', { id: req.params.id, user: req.user.email });
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// DELETE abbreviation (soft delete)
+app.delete('/api/Abbreviation/:id',
+  authMiddleware,
+  [param('id').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const result = await pool.query(
+        'UPDATE abbreviation SET deleted_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id',
+        [req.params.id, req.user.id]
+      );
+      
+      if (result.rows.length === 0) {
+        throw new NotFoundError('Abbreviation not found or you do not have permission to delete it');
+      }
+      
+      await logAudit(req.user.id, 'delete', 'abbreviation', null);
+      
+      logger.info('Abbreviation deleted', { id: req.params.id, user: req.user.email });
+      
+      res.json({ success: true });
     } catch (error) {
       next(error);
     }
