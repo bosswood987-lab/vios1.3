@@ -28,6 +28,7 @@ export default function ImagerieSection({ patientId, patient }) {
   const [selectedType, setSelectedType] = useState("OCT");
   const [interpretation, setInterpretation] = useState("");
   const [currentId, setCurrentId] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   
   const [formData, setFormData] = useState({
     patient_id: patientId,
@@ -38,6 +39,19 @@ export default function ImagerieSection({ patientId, patient }) {
     interpretation: "",
     notes: ""
   });
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const user = await base44.auth.me().catch(() => null);
+      setCurrentUser(user || { email: 'default@user.com', specialite: 'ophtalmologue' });
+    };
+    loadUser();
+  }, []);
+
+  // Permission logic: Orthoptiste, ophtalmologue and admin can edit imagerie
+  const canEdit = currentUser?.specialite === 'orthoptiste' || 
+                  currentUser?.specialite === 'ophtalmologue' || 
+                  currentUser?.specialite === 'admin';
 
   const { data: imageries, isLoading } = useQuery({
     queryKey: ['imageries', patientId],
@@ -108,7 +122,7 @@ export default function ImagerieSection({ patientId, patient }) {
   // Écouter l'événement de sauvegarde depuis le parent
   useEffect(() => {
     const handleSave = async () => {
-      if (!interpretation) return;
+      if (!interpretation || !canEdit) return;
       
       if (currentId) {
         await updateImagerieMutation.mutateAsync({
@@ -128,11 +142,12 @@ export default function ImagerieSection({ patientId, patient }) {
 
     window.addEventListener('dossier-save', handleSave);
     return () => window.removeEventListener('dossier-save', handleSave);
-  }, [interpretation, currentId, selectedType]);
+  }, [interpretation, currentId, selectedType, canEdit]);
 
   // Écouter l'événement mega-raccourci
   useEffect(() => {
     const handleMegaRaccourci = (e) => {
+      if (!canEdit) return;
       const megaRaccourci = e.detail;
       if (megaRaccourci.interpretation_imagerie) {
         setInterpretation(prev => 
@@ -143,7 +158,7 @@ export default function ImagerieSection({ patientId, patient }) {
 
     window.addEventListener('mega-raccourci-applied', handleMegaRaccourci);
     return () => window.removeEventListener('mega-raccourci-applied', handleMegaRaccourci);
-  }, []);
+  }, [canEdit]);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -156,6 +171,7 @@ export default function ImagerieSection({ patientId, patient }) {
   };
 
   const handleSaveImagerie = () => {
+    if (!canEdit) return;
     createImageriePleineMutation.mutate(formData);
   };
 
@@ -168,13 +184,15 @@ export default function ImagerieSection({ patientId, patient }) {
     <div className="space-y-6 pb-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Imagerie</h2>
-        <Button
-          onClick={() => setShowDialog(true)}
-          className="bg-blue-600 hover:bg-blue-700 gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Ajouter avec image
-        </Button>
+        {canEdit && (
+          <Button
+            onClick={() => setShowDialog(true)}
+            className="bg-blue-600 hover:bg-blue-700 gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter avec image
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -185,7 +203,7 @@ export default function ImagerieSection({ patientId, patient }) {
           <div className="flex gap-4">
             <div className="w-1/3">
               <Label className="mb-2 block">Type d'imagerie</Label>
-              <Select value={selectedType} onValueChange={setSelectedType}>
+              <Select value={selectedType} onValueChange={setSelectedType} disabled={!canEdit}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -207,6 +225,7 @@ export default function ImagerieSection({ patientId, patient }) {
                 rows={8}
                 placeholder="Écrire l'interprétation de l'imagerie..."
                 className="w-full"
+                disabled={!canEdit}
               />
             </div>
           </div>

@@ -48,14 +48,18 @@ export default function ExamenOrthoptisteForm({ patientId, patient }) {
   useEffect(() => {
     const loadUser = async () => {
       const user = await base44.auth.me().catch(() => null);
-      setCurrentUser(user || { email: 'default@user.com' });
+      setCurrentUser(user || { email: 'default@user.com', specialite: 'ophtalmologue' });
     };
     loadUser();
   }, []);
 
-  const canEdit = true; // Always true
-  const canEditPrescription = true; // Always true
-  const canPrintOrEmail = true; // Always true
+  // Permission logic based on user specialite
+  const canEdit = currentUser?.specialite === 'orthoptiste' || 
+                  currentUser?.specialite === 'ophtalmologue' || 
+                  currentUser?.specialite === 'admin';
+  const canEditPrescription = currentUser?.specialite === 'ophtalmologue' || 
+                              currentUser?.specialite === 'admin';
+  const canPrintOrEmail = true; // Everyone can print/email
 
   const initialFormData = {
     patient_id: patientId,

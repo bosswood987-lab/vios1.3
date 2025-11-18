@@ -47,12 +47,14 @@ export default function ExamenOphtalmologieForm({ patientId, patient }) {
   useEffect(() => {
     const loadUser = async () => {
       const user = await base44.auth.me().catch(() => null);
-      setCurrentUser(user || { email: 'default@user.com' });
+      setCurrentUser(user || { email: 'default@user.com', specialite: 'ophtalmologue' });
     };
     loadUser();
   }, []);
 
-  const canEdit = true; // Always true
+  // Permission logic: Only ophtalmologue and admin can edit examen ophtalmologique
+  const canEdit = currentUser?.specialite === 'ophtalmologue' || 
+                  currentUser?.specialite === 'admin';
 
   const initialFormData = {
     patient_id: patientId,

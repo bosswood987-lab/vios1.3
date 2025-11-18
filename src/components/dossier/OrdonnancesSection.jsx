@@ -32,13 +32,17 @@ export default function OrdonnancesSection({ patientId, patient }) {
   useEffect(() => {
     const loadUser = async () => {
       const user = await base44.auth.me().catch(() => null);
-      setCurrentUser(user || { email: 'default@user.com' });
+      setCurrentUser(user || { email: 'default@user.com', specialite: 'ophtalmologue' });
     };
     loadUser();
   }, []);
 
-  const canCreate = true; // Always true
-  const canPrintOrEmail = true; // Always true
+  // Permission logic:
+  // - Only ophtalmologue and admin can create/modify ordonnances
+  // - Everyone can print/email ordonnances
+  const canCreate = currentUser?.specialite === 'ophtalmologue' || 
+                    currentUser?.specialite === 'admin';
+  const canPrintOrEmail = true; // Everyone can print/email
 
   const { data: ordonnances, isLoading } = useQuery({
     queryKey: ['ordonnances', patientId],
