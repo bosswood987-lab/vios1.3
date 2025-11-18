@@ -900,13 +900,17 @@ export default function LentillesSection({ patientId, patient }) {
   useEffect(() => {
     const loadUser = async () => {
       const user = await base44.auth.me().catch(() => null);
-      setCurrentUser(user || { email: 'default@user.com' });
+      setCurrentUser(user || { email: 'default@user.com', specialite: 'ophtalmologue' });
     };
     loadUser();
   }, []);
 
-  const canEdit = true; // Always true
-  const canPrintOrEmail = true; // Always true
+  // Permission logic:
+  // - Only ophtalmologue and admin can create/modify prescriptions de lentilles
+  // - Everyone can print/email prescriptions de lentilles
+  const canEdit = currentUser?.specialite === 'ophtalmologue' || 
+                  currentUser?.specialite === 'admin';
+  const canPrintOrEmail = true; // Everyone can print/email
 
   const { data: prescriptions } = useQuery({
     queryKey: ['prescriptions-lentilles', patientId],
