@@ -33,13 +33,17 @@ export default function TraitementsSection({ patientId, patient }) {
   useEffect(() => {
     const loadUser = async () => {
       const user = await base44.auth.me().catch(() => null); // Added .catch(() => null)
-      setCurrentUser(user || { email: 'default@user.com' }); // Set default user if null
+      setCurrentUser(user || { email: 'default@user.com', specialite: 'ophtalmologue' }); // Set default user with specialite
     };
     loadUser();
   }, []);
 
-  const canCreate = true; // Always true
-  const canPrintOrEmail = true; // Always true
+  // Permission logic:
+  // - Only ophtalmologue and admin can create/modify ordonnances de traitement
+  // - Everyone can print/email ordonnances de traitement
+  const canCreate = currentUser?.specialite === 'ophtalmologue' || 
+                    currentUser?.specialite === 'admin';
+  const canPrintOrEmail = true; // Everyone can print/email
 
   const { data: ordonnances, isLoading } = useQuery({
     queryKey: ['ordonnances-medicaments', patientId],

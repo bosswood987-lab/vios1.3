@@ -48,14 +48,18 @@ export default function ExamenOrthoptisteForm({ patientId, patient }) {
   useEffect(() => {
     const loadUser = async () => {
       const user = await base44.auth.me().catch(() => null);
-      setCurrentUser(user || { email: 'default@user.com' });
+      setCurrentUser(user || { email: 'default@user.com', specialite: 'ophtalmologue' });
     };
     loadUser();
   }, []);
 
-  const canEdit = true; // Always true
-  const canEditPrescription = true; // Always true
-  const canPrintOrEmail = true; // Always true
+  // Permission logic based on user specialite
+  const canEdit = currentUser?.specialite === 'orthoptiste' || 
+                  currentUser?.specialite === 'ophtalmologue' || 
+                  currentUser?.specialite === 'admin';
+  const canEditPrescription = currentUser?.specialite === 'ophtalmologue' || 
+                              currentUser?.specialite === 'admin';
+  const canPrintOrEmail = true; // Everyone can print/email
 
   const initialFormData = {
     patient_id: patientId,
@@ -817,7 +821,7 @@ export default function ExamenOrthoptisteForm({ patientId, patient }) {
     const nouvelExamen = {
       patient_id: patientId,
       date_examen: new Date().toISOString(),
-      ref_subjective_sous_skiacol: true,
+      ref_subjective_sous_skiacol: false,
       motif_consultation: "",
       notes: ""
     };
@@ -889,7 +893,7 @@ export default function ExamenOrthoptisteForm({ patientId, patient }) {
                     onClick={() => switchExamen(idx)}
                     className="h-7 text-xs"
                   >
-                    Examen {idx + 1} {ex.ref_subjective_sous_skiacol && "(Skiacol)"}
+                    Examen {idx + 1}
                   </Button>
                 ))}
                 {canEdit && examensAujourdhui.length < 2 && (

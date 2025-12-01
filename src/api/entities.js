@@ -47,6 +47,7 @@ export const IVT = base44.entities.IVT;
 
 export const TypeVerres = base44.entities.TypeVerres;
 
+export const Abbreviation = base44.entities.Abbreviation;
 
 
 // auth sdk:

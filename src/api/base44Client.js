@@ -177,7 +177,8 @@ export const base44 = {
     IVT: new EntityAPI('IVT'),
     TypeVerres: new EntityAPI('TypeVerres'),
     Consultation: new EntityAPI('Consultation'),
-    User: new EntityAPI('User')
+    User: new EntityAPI('User'),
+    Abbreviation: new EntityAPI('Abbreviation')
   },
 
   auth: {

@@ -116,6 +116,14 @@ export default function Gestion() {
     template_word_url: ""
   });
 
+  const [showAbbreviationDialog, setShowAbbreviationDialog] = useState(false);
+  const [newAbbreviation, setNewAbbreviation] = useState({
+    abbreviation: "",
+    full_text: "",
+    description: "",
+    is_global: false
+  });
+
   useEffect(() => {
     if (currentUser) {
       setSignatureData({
@@ -210,6 +218,16 @@ export default function Gestion() {
     queryFn: async () => {
       const all = await base44.entities.MegaRaccourci.list();
       return all.filter(r => r.is_global || r.created_by === currentUser?.email);
+    },
+    initialData: [],
+    enabled: !!currentUser,
+  });
+
+  const { data: abbreviations } = useQuery({
+    queryKey: ['abbreviations'],
+    queryFn: async () => {
+      // Backend already filters by user_id and is_global
+      return await base44.entities.Abbreviation.list();
     },
     initialData: [],
     enabled: !!currentUser,
@@ -353,12 +371,31 @@ export default function Gestion() {
     },
   });
 
+  const createAbbreviationMutation = useMutation({
+    mutationFn: (data) => base44.entities.Abbreviation.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['abbreviations'] });
+      setShowAbbreviationDialog(false);
+      setNewAbbreviation({ abbreviation: "", full_text: "", description: "", is_global: false });
+      toast.success("Abréviation créée avec succès");
+    },
+  });
+
+  const deleteAbbreviationMutation = useMutation({
+    mutationFn: (id) => base44.entities.Abbreviation.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['abbreviations'] });
+      toast.success("Abréviation supprimée avec succès");
+    },
+  });
+
   const updateSignatureMutation = useMutation({
     mutationFn: (data) => base44.auth.updateMe(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['current-user'] });
       setShowSignatureDialog(false);
       base44.auth.me().then(setCurrentUser);
+      toast.success("Documents & signature mis à jour avec succès");
     },
   });
 
@@ -523,6 +560,10 @@ export default function Gestion() {
               <Eye className="w-4 h-4" />
               Associations
             </TabsTrigger>
+            <TabsTrigger value="abbreviations" className="gap-2">
+              <Zap className="w-4 h-4" />
+              Abréviations
+            </TabsTrigger>
             <TabsTrigger value="raccourcis" className="gap-2">
               <Zap className="w-4 h-4" />
               Raccourcis Examen
@@ -546,6 +587,10 @@ export default function Gestion() {
             <TabsTrigger value="lentilles" className="gap-2">
               <Contact className="w-4 h-4" />
               Lentilles
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <ImageIcon className="w-4 h-4" />
+              Documents & Signature
             </TabsTrigger>
           </TabsList>
 
@@ -650,6 +695,68 @@ export default function Gestion() {
                             variant="ghost"
                             size="sm"
                             onClick={() => deleteAssociationMutation.mutate(assoc.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="abbreviations" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">Abréviations automatiques</h2>
+                <p className="text-sm text-gray-500 mt-1">Les abréviations se transforment automatiquement en texte complet lors de la saisie</p>
+              </div>
+              <Button onClick={() => setShowAbbreviationDialog(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Ajouter une abréviation
+              </Button>
+            </div>
+
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px]">Abréviation</TableHead>
+                    <TableHead>Texte complet</TableHead>
+                    <TableHead className="w-[200px]">Description</TableHead>
+                    <TableHead className="w-[100px]">Portée</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {abbreviations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        Aucune abréviation enregistrée
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    abbreviations.map((abbr) => (
+                      <TableRow key={abbr.id}>
+                        <TableCell className="font-mono font-medium">{abbr.abbreviation}</TableCell>
+                        <TableCell className="text-sm">{abbr.full_text}</TableCell>
+                        <TableCell className="text-sm text-gray-600">{abbr.description}</TableCell>
+                        <TableCell>
+                          {abbr.is_global && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700">
+                              <Globe className="w-3 h-3 mr-1" />
+                              Global
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteAbbreviationMutation.mutate(abbr.id)}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1042,6 +1149,218 @@ export default function Gestion() {
                 </TableBody>
               </Table>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="documents" className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold">Personnalisation des documents médicaux</h2>
+              <p className="text-gray-600">
+                Configurez votre en-tête et signature pour tous vos documents : ordonnances, prescriptions de lunettes/lentilles, courriers médicaux...
+              </p>
+            </div>
+
+            <div className="grid gap-6">
+              {/* Section 1: En-tête */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileUp className="w-5 h-5 text-blue-600" />
+                    En-tête de document
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Cet en-tête apparaîtra en haut de tous vos documents médicaux (ordonnances, prescriptions, courriers)
+                  </p>
+
+                  {signatureData.entete_ordonnance ? (
+                    <Card className="p-4 bg-gray-50 border-2 border-blue-200">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          {signatureData.entete_ordonnance.toLowerCase().endsWith('.pdf') ? (
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-12 h-12 text-red-600" />
+                              <div>
+                                <p className="font-medium">PDF En-tête importé</p>
+                                <a 
+                                  href={signatureData.entete_ordonnance} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 hover:underline"
+                                >
+                                  Télécharger le PDF
+                                </a>
+                              </div>
+                            </div>
+                          ) : (
+                            <img 
+                              src={signatureData.entete_ordonnance} 
+                              alt="En-tête" 
+                              className="max-h-64 object-contain w-full rounded border"
+                            />
+                          )}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setSignatureData({ ...signatureData, entete_ordonnance: "" })}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Supprimer
+                        </Button>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="p-8 border-2 border-dashed border-gray-300 bg-gray-50">
+                      <div className="text-center">
+                        <FileUp className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                        <p className="font-medium text-gray-700 mb-1">Aucun en-tête configuré</p>
+                        <p className="text-sm text-gray-500">
+                          Uploadez une image (JPG, PNG) ou un PDF qui apparaîtra en haut de tous vos documents
+                        </p>
+                      </div>
+                    </Card>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleUploadEnteteImage}
+                      className="hidden"
+                      id="entete-upload-tab"
+                      disabled={uploadingTemplate}
+                    />
+                    <Label
+                      htmlFor="entete-upload-tab"
+                      className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {uploadingTemplate ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Téléchargement...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          {signatureData.entete_ordonnance ? 'Remplacer l\'en-tête' : 'Choisir une image ou PDF'}
+                        </>
+                      )}
+                    </Label>
+                    <p className="text-xs text-gray-500">
+                      Formats acceptés : JPG, PNG, PDF
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Section 2: Signature */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-green-600" />
+                    Signature manuscrite
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Ajoutez une image de votre signature qui apparaîtra en bas de vos documents
+                  </p>
+
+                  {signatureData.signature_image_url ? (
+                    <Card className="p-4 bg-gray-50 border-2 border-green-200">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          <img 
+                            src={signatureData.signature_image_url} 
+                            alt="Signature" 
+                            className="max-h-32 object-contain bg-white p-2 rounded border"
+                          />
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setSignatureData({ ...signatureData, signature_image_url: "" })}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Supprimer
+                        </Button>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="p-8 border-2 border-dashed border-gray-300 bg-gray-50">
+                      <div className="text-center">
+                        <ImageIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                        <p className="font-medium text-gray-700 mb-1">Aucune signature configurée</p>
+                        <p className="text-sm text-gray-500">
+                          Uploadez une image de votre signature manuscrite
+                        </p>
+                      </div>
+                    </Card>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleUploadSignatureImage}
+                      className="hidden"
+                      id="signature-upload-tab"
+                      disabled={uploadingSignature}
+                    />
+                    <Label
+                      htmlFor="signature-upload-tab"
+                      className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      {uploadingSignature ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Téléchargement...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          {signatureData.signature_image_url ? 'Remplacer la signature' : 'Choisir une image'}
+                        </>
+                      )}
+                    </Label>
+                    <p className="text-xs text-gray-500">
+                      Formats acceptés : JPG, PNG
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Section 3: Aperçu et sauvegarde */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-blue-100 rounded-full">
+                        <Save className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Enregistrer vos modifications</p>
+                        <p className="text-sm text-gray-600">
+                          Appliquez les changements à tous vos futurs documents
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={handleSaveSignature}
+                      size="lg"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                      disabled={uploadingSignature || uploadingTemplate}
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Enregistrer
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
 
@@ -1646,6 +1965,73 @@ export default function Gestion() {
         </Dialog>
 
         {/* Dialog Raccourci */}
+        {/* Dialog Abréviation */}
+        <Dialog open={showAbbreviationDialog} onOpenChange={setShowAbbreviationDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Ajouter une abréviation automatique</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={newAbbreviation.is_global}
+                    onChange={(e) => setNewAbbreviation({ ...newAbbreviation, is_global: e.target.checked })}
+                    className="rounded"
+                  />
+                  <Globe className="w-4 h-4" />
+                  Abréviation globale (visible par tous)
+                </Label>
+              </div>
+              <div>
+                <Label>Abréviation *</Label>
+                <Input
+                  value={newAbbreviation.abbreviation}
+                  onChange={(e) => setNewAbbreviation({ ...newAbbreviation, abbreviation: e.target.value })}
+                  placeholder="Ex: ppn"
+                  className="font-mono"
+                />
+                <p className="text-xs text-gray-500 mt-1">Tapez cette abréviation suivie d'un espace pour l'expansion automatique</p>
+              </div>
+              <div>
+                <Label>Texte complet *</Label>
+                <Textarea
+                  value={newAbbreviation.full_text}
+                  onChange={(e) => setNewAbbreviation({ ...newAbbreviation, full_text: e.target.value })}
+                  rows={3}
+                  placeholder="Ex: pôle postérieur normal"
+                />
+              </div>
+              <div>
+                <Label>Description (optionnelle)</Label>
+                <Input
+                  value={newAbbreviation.description}
+                  onChange={(e) => setNewAbbreviation({ ...newAbbreviation, description: e.target.value })}
+                  placeholder="Ex: Description du pôle postérieur"
+                />
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-gray-600">
+                  L'abréviation sera automatiquement remplacée par le texte complet lorsque vous tapez un espace après celle-ci dans les champs de texte compatibles.
+                </p>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowAbbreviationDialog(false)}>
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={() => createAbbreviationMutation.mutate(newAbbreviation)}
+                  disabled={!newAbbreviation.abbreviation || !newAbbreviation.full_text}
+                >
+                  Enregistrer
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog Raccourci */}
         <Dialog open={showRaccourciDialog} onOpenChange={setShowRaccourciDialog}>
           <DialogContent>
             <DialogHeader>
@@ -1684,6 +2070,8 @@ export default function Gestion() {
                   <SelectContent>
                     <SelectItem value="lampe_fente">Lampe à fente</SelectItem>
                     <SelectItem value="fond_oeil">Fond d'œil</SelectItem>
+                    <SelectItem value="diagnostic">Diagnostic</SelectItem>
+                    <SelectItem value="conduite_tenir">Conduite à tenir</SelectItem>
                     <SelectItem value="motilite">Motilité</SelectItem>
                     <SelectItem value="motif_consultation">Motif de consultation</SelectItem>
                     <SelectItem value="allergie">Allergie</SelectItem>

@@ -18,7 +18,7 @@ CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp);
 CREATE TABLE IF NOT EXISTS user_table (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255),
+  password_hash VARCHAR(255) NOT NULL,
   full_name VARCHAR(255),
   role VARCHAR(50) DEFAULT 'user',
   specialite VARCHAR(100),
@@ -469,6 +469,24 @@ CREATE TABLE IF NOT EXISTS typeverres (
   deleted_at TIMESTAMP
 );
 
+-- ==================== ABBREVIATIONS ====================
+CREATE TABLE IF NOT EXISTS abbreviation (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  abbreviation VARCHAR(50) NOT NULL,
+  full_text TEXT NOT NULL,
+  description VARCHAR(255),
+  user_id UUID REFERENCES user_table(id) ON DELETE CASCADE,
+  is_global BOOLEAN DEFAULT FALSE,
+  created_date TIMESTAMP DEFAULT NOW(),
+  updated_date TIMESTAMP DEFAULT NOW(),
+  created_by VARCHAR(255),
+  deleted_at TIMESTAMP
+);
+
+CREATE INDEX idx_abbreviation_abbrev ON abbreviation(abbreviation);
+CREATE INDEX idx_abbreviation_global ON abbreviation(is_global);
+CREATE INDEX idx_abbreviation_user_id ON abbreviation(user_id);
+
 -- ==================== CONSULTATION ====================
 CREATE TABLE IF NOT EXISTS consultation (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -500,9 +518,8 @@ CREATE TABLE IF NOT EXISTS raccourcioverviewophtalmo (
 );
 
 -- ==================== DEFAULT USER ====================
-INSERT INTO user_table (email, full_name, role, specialite, is_active) 
-VALUES ('admin@ophtalmo.com', 'Administrator', 'admin', 'admin', true) 
-ON CONFLICT (email) DO NOTHING;
+-- Note: Default admin user must be created using the create-admin.js script
+-- Run: node create-admin.js to create the admin user with a hashed password
 
 -- ==================== VIEWS FOR REPORTING ====================
 CREATE OR REPLACE VIEW v_patient_consultations AS
